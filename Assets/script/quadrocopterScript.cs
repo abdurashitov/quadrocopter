@@ -160,6 +160,65 @@ public class quadrocopterScript : MonoBehaviour {
 		//}
 	}
 
+	void AddControls()
+	{
+		//Change throttle to move up or down
+		if (Input.GetKey(KeyCode.UpArrow))
+		{
+			throttle += 5f;
+		}
+		if (Input.GetKey(KeyCode.DownArrow))
+		{
+			throttle -= 5f;
+		}
+
+		throttle = Mathf.Clamp((float)throttle, 0f, 200f);
+
+		//Steering
+
+
+		if (Input.GetKey(KeyCode.W))
+		{
+			targetPitch += 1f;
+		}
+		else
+		{
+			if (Input.GetKey(KeyCode.S))
+			{
+				targetPitch += -1f;
+			}
+			else 
+				targetPitch = 0;
+		}
+
+		targetPitch = Mathf.Clamp((float)targetPitch, -30f, 30f);
+
+		if (Input.GetKey(KeyCode.D))
+		{
+			targetRoll += -1f;
+		}
+		else
+		{
+			if (Input.GetKey(KeyCode.A))
+			{
+				targetRoll += 1f;
+			}
+			else
+				targetRoll = 0;
+		}
+		//Yaw
+		targetRoll = Mathf.Clamp((float)targetRoll, -30f, 30f);
+
+		if (Input.GetKey(KeyCode.LeftArrow))
+		{
+			targetYaw += -1f;
+		}
+		if (Input.GetKey(KeyCode.RightArrow))
+		{
+			targetYaw += 1f;
+		}
+	}
+
 	//как советуют в доке по Unity вычисления проводим в FixedUpdate, а не в Update
 	private void Start()
     {
@@ -172,6 +231,7 @@ public class quadrocopterScript : MonoBehaviour {
 		stabilize ();
 		AutoPossition();
 		AutoHangup();
+		AddControls();
 	}
 	
 }
@@ -204,5 +264,5 @@ public class PID {
 		this.prevErr = err;
 		return force;
 	}
-	
+
 };
