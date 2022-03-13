@@ -27,9 +27,14 @@ public class quadrocopterScript : MonoBehaviour {
 
 	GPSModul gps;
 	public bool checkAutoHangup;
+	public bool autoPilot;
+	public bool stab;
 
 	private Globalparametr Gp;
 
+
+	public float fwdSpeed;
+	public float driftSpeed;
 	//PID регуляторы, которые будут стабилизировать углы
 	//каждому углу свой регулятор, класс PID определен ниже
 	//константы подобраны на глаз :) пробуйте свои значения
@@ -39,6 +44,7 @@ public class quadrocopterScript : MonoBehaviour {
 
 	private PID SpeedPID = new PID(0.4, 0, 0);
 
+	private int radiusZone = 2;
 	private Quaternion prevRotation = new Quaternion (0, 1, 0, 0);
 
 	void readRotation () {
@@ -58,6 +64,9 @@ public class quadrocopterScript : MonoBehaviour {
 	//с помощью PID регуляторов мы настраиваем
 	//мощность наших моторов так, чтобы углы приняли нужные нам значения
 	void stabilize () {
+
+		fwdSpeed = Vector3.Dot(gps.rb.velocity, gps.Quadrocopter.transform.forward);
+		driftSpeed = Vector3.Dot(gps.rb.velocity, gps.Quadrocopter.transform.right);
 
 		//нам необходимо посчитать разность между требуемым углом и текущим
 		//эта разность должна лежать в промежутке [-180, 180] чтобы обеспечить
@@ -124,70 +133,95 @@ public class quadrocopterScript : MonoBehaviour {
 	void AutoHangup()
     {
 		//проверка включена ли автовысота
-		if (!checkAutoHangup)
-			return;
+
 		double verticalSpeed = gps.getYVelocity();
-		throttle = 2.48134235*10 - verticalSpeed*5 + ((targetPossition.y- gps.getHeight())*5);
-		roll = 0;
-		pitch = 0;
+		throttle = 2.48134235*10 - verticalSpeed*5 + ((targetPossition.y- gps.getHeight())*20);//5
 		throttle = throttle > 0 ? throttle : 0;
 		//для вычесления коэфицента
 		//throttle += 2 * verticalSpeed * (1 / (throttle + 1) * -1);
 
 	}
+	
+	void stabilite()
+    {
+		if (!stab )
+			return;
+		stabForward();
+		stabHorizntal();
+		
+	}
+
+	void stabForward()
+    {
+		if (fwdSpeed < 5 && fwdSpeed > -5)
+			targetPitch = -fwdSpeed*3;
+		else
+			targetPitch = -Math.Sign(fwdSpeed) * 30;
+	}
+
+	void stabHorizntal()
+	{
+		if (driftSpeed < 5 && driftSpeed > -5)
+			targetRoll = driftSpeed*3;
+		else
+			targetRoll = Math.Sign(driftSpeed) * 30;
+	}
 
 	void AutoPossition()
     {
+		
+		if (!autoPilot)
+			return;
+		//если автопилот включен 
+		// берем точку с маршрута
 		targetPossition = Gp.route[counterPoint];
+		//считаем растояние до точки
 		distansToTargetPosition = 
 			Math.Sqrt(Math.Pow(Math.Abs(targetPossition.x - gps.getGps().x), 2) +
 			Math.Pow(Math.Abs(targetPossition.z - gps.getGps().z), 2));
-
+		//считаем угол на который необходимо повернутся
 		targetYaw = (Math.Atan2(targetPossition.x - gps.getGps().x, targetPossition.z - gps.getGps().z)) * 180 / Math.PI;
 
-        if (Math.Abs(targetPossition.x - gps.getGps().x) <2 && Math.Abs(targetPossition.z - gps.getGps().z) <2)
+
+		//если подлетаем к точке на растояние radiusZone то начинаем слидить за следуйщей
+		if (Math.Abs(targetPossition.x - gps.getGps().x) < radiusZone && Math.Abs(targetPossition.z - gps.getGps().z) < radiusZone)
 		{
 			counterPoint = counterPoint<Gp.route.Count-1 ? counterPoint+1 : counterPoint;
 			targetPossition = Gp.route[counterPoint];
+			stabHorizntal();
 		}
+
+
 		//SpeedPID.calc(distansToTargetPosition, 0.0)
 		//тормозим за 5 метров умнажая скорость на кооэфиуент которой увелечивается при приблтжение к позиции
 		//if(targetPossition.y - gps.getGps().y <1)
 		//      {
-		
-		double fd = SpeedPID.calc(distansToTargetPosition, 0.0);
-		targetPitch = fd > 20 ? 20 : targetPitch;
+
+		targetPitch = 30;
 		//}
 	}
 
 	void AddControls()
 	{
+		if (autoPilot)
+			return;
 		//Change throttle to move up or down
 		if (Input.GetKey(KeyCode.UpArrow))
-		{
-			throttle += 5f;
-		}
-		if (Input.GetKey(KeyCode.DownArrow))
-		{
-			throttle -= 5f;
-		}
+			targetPossition.y += 0.2f;
 
-		throttle = Mathf.Clamp((float)throttle, 0f, 200f);
+		if (Input.GetKey(KeyCode.DownArrow))
+			targetPossition.y -= 0.2f;
 
 		//Steering
-
-
 		if (Input.GetKey(KeyCode.W))
-		{
 			targetPitch += 1f;
-		}
 		else
 		{
 			if (Input.GetKey(KeyCode.S))
 			{
 				targetPitch += -1f;
 			}
-			else 
+			else
 				targetPitch = 0;
 		}
 
@@ -208,17 +242,16 @@ public class quadrocopterScript : MonoBehaviour {
 		}
 		//Yaw
 		targetRoll = Mathf.Clamp((float)targetRoll, -30f, 30f);
-
 		if (Input.GetKey(KeyCode.LeftArrow))
-		{
 			targetYaw += -1f;
-		}
 		if (Input.GetKey(KeyCode.RightArrow))
-		{
 			targetYaw += 1f;
-		}
-	}
+		if (targetYaw < 0)
+			targetYaw = 360+targetYaw;
+		if(targetYaw>360 )
+			targetYaw = targetYaw - 360;
 
+	}
 	//как советуют в доке по Unity вычисления проводим в FixedUpdate, а не в Update
 	private void Start()
     {
@@ -232,6 +265,7 @@ public class quadrocopterScript : MonoBehaviour {
 		AutoPossition();
 		AutoHangup();
 		AddControls();
+		stabilite();
 	}
 	
 }

@@ -7,11 +7,11 @@ public class Globalparametr : MonoBehaviour
 	private static Globalparametr instance;
 	public List<Vector3> route = new List<Vector3> { 
 
-		new Vector3(40, 10, 0), 
-		//new Vector3(40, 10, 20),
-		//new Vector3(0, 10, 40),
-		//new Vector3(40, 10,40),
-		//new Vector3(0, 10,0),
+		new Vector3(40, 10, -10), 
+		new Vector3(40, 10, 20),
+		new Vector3(0, 10, 40),
+		new Vector3(40, 10,40),
+		new Vector3(0, 10,0),
 
 	};
 

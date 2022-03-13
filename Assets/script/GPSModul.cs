@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class GPSModul : MonoBehaviour
 {
     public GameObject Quadrocopter;
-    Rigidbody rb;
+    public Rigidbody rb;
     public Vector3 GPS;
     public Vector3 vel;
     public Text Coordinate;
