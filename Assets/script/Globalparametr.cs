@@ -15,6 +15,18 @@ public class Globalparametr : MonoBehaviour
 
 	};
 
+	public List<Comand> route1 = new List<Comand> {
+
+		new Comand(Comand.comands.up, new Vector3(0,10,0), 0),
+		new Comand(Comand.comands.goTo, new Vector3(40,10,-10), 8),
+		new Comand(Comand.comands.goTo, new Vector3(40,10,20), 8),
+		new Comand(Comand.comands.goTo, new Vector3(0,10,40), 8),
+		new Comand(Comand.comands.goTo, new Vector3(0,10,0), 8),
+		//new Comand(Comand.comands.hover, new Vector3(0,10,0), 0),
+		new Comand(Comand.comands.down, new Vector3(0,0,0), 0)
+
+	};
+
 	Globalparametr()
     {    }
 

@@ -32,9 +32,12 @@ public class quadrocopterScript : MonoBehaviour {
 
 	private Globalparametr Gp;
 
+	private SwitchingCam cam;
+
 
 	public float fwdSpeed;
 	public float driftSpeed;
+	double verticalSpeed;
 	//PID регуляторы, которые будут стабилизировать углы
 	//каждому углу свой регулятор, класс PID определен ниже
 	//константы подобраны на глаз :) пробуйте свои значения
@@ -54,6 +57,10 @@ public class quadrocopterScript : MonoBehaviour {
 		//из акселерометра-гироскопа-магнетометра, так же как делает это ваш
 		//смартфон
 		Vector3 rot = GameObject.Find ("Frame").GetComponent<Transform> ().rotation.eulerAngles;
+		fwdSpeed = Vector3.Dot(gps.rb.velocity, gps.Quadrocopter.transform.forward);
+		driftSpeed = Vector3.Dot(new Vector3(gps.rb.velocity.x, 0 , gps.rb.velocity.z), gps.Quadrocopter.transform.right);
+		verticalSpeed = gps.getYVelocity();
+
 		pitch = rot.x;
 		yaw = rot.y;
 		roll = rot.z;
@@ -64,9 +71,6 @@ public class quadrocopterScript : MonoBehaviour {
 	//с помощью PID регуляторов мы настраиваем
 	//мощность наших моторов так, чтобы углы приняли нужные нам значения
 	void stabilize () {
-
-		fwdSpeed = Vector3.Dot(gps.rb.velocity, gps.Quadrocopter.transform.forward);
-		driftSpeed = Vector3.Dot(gps.rb.velocity, gps.Quadrocopter.transform.right);
 
 		//нам необходимо посчитать разность между требуемым углом и текущим
 		//эта разность должна лежать в промежутке [-180, 180] чтобы обеспечить
@@ -134,9 +138,8 @@ public class quadrocopterScript : MonoBehaviour {
     {
 		//проверка включена ли автовысота
 
-		double verticalSpeed = gps.getYVelocity();
-		throttle = 2.48134235*10 - verticalSpeed*5 + ((targetPossition.y- gps.getHeight())*20);//5
-		throttle = throttle > 0 ? throttle : 0;
+		throttle = 2.48134235*10 - verticalSpeed*5 + ((targetPossition.y- gps.getHeight())*6);//5
+		throttle = throttle > 20 ? throttle : 20;
 		//для вычесления коэфицента
 		//throttle += 2 * verticalSpeed * (1 / (throttle + 1) * -1);
 
@@ -153,7 +156,7 @@ public class quadrocopterScript : MonoBehaviour {
 
 	void stabForward()
     {
-		if (fwdSpeed < 5 && fwdSpeed > -5)
+		if (fwdSpeed < 1 && fwdSpeed > -1)
 			targetPitch = -fwdSpeed*3;
 		else
 			targetPitch = -Math.Sign(fwdSpeed) * 30;
@@ -161,18 +164,63 @@ public class quadrocopterScript : MonoBehaviour {
 
 	void stabHorizntal()
 	{
-		if (driftSpeed < 5 && driftSpeed > -5)
-			targetRoll = driftSpeed*3;
-		else
-			targetRoll = Math.Sign(driftSpeed) * 30;
+		//if (driftSpeed < 5 && driftSpeed > -5)
+		//	targetRoll = driftSpeed*6;
+		//else
+		//	targetRoll = Math.Sign(driftSpeed) * 30;
+		float cof = driftSpeed * 4;
+		targetRoll = Math.Abs(cof) > 30? Math.Sign(cof) *30 : cof;
+		
+		
 	}
 
 	void AutoPossition()
     {
-		
 		if (!autoPilot)
 			return;
-		//если автопилот включен 
+		Comand comand = Gp.route1[counterPoint];
+		switch (comand.getComand()){
+			case Comand.comands.up:
+				targetPossition = new Vector3(gps.getGps().x, comand.getpoint().y, gps.getGps().z);
+				if (Math.Abs(targetPossition.y - gps.getGps().y) < radiusZone)
+					counterPoint = counterPoint < Gp.route1.Count - 1 ? counterPoint + 1 : counterPoint;
+
+				break;
+			case Comand.comands.down:
+				targetPossition = new Vector3(gps.getGps().x, 0, gps.getGps().z);
+				if (Math.Abs(targetPossition.x - gps.getGps().y) < radiusZone)
+					counterPoint = counterPoint < Gp.route1.Count - 1 ? counterPoint + 1 : counterPoint;
+
+				break;
+			case Comand.comands.goTo:
+				targetPossition = Gp.route[counterPoint];
+				//считаем растояние до точки
+				distansToTargetPosition =
+					Math.Sqrt(Math.Pow(Math.Abs(targetPossition.x - gps.getGps().x), 2) +
+					Math.Pow(Math.Abs(targetPossition.z - gps.getGps().z), 2));
+				//считаем угол на который необходимо повернутся
+				targetYaw = (Math.Atan2(targetPossition.x - gps.getGps().x, targetPossition.z - gps.getGps().z)) * 180 / Math.PI;
+				//если подлетаем к точке на растояние radiusZone то начинаем слидить за следуйщей
+				if (Math.Abs(targetPossition.x - gps.getGps().x) < radiusZone && Math.Abs(targetPossition.z - gps.getGps().z) < radiusZone)
+				{
+					counterPoint = counterPoint < Gp.route1.Count - 1 ? counterPoint + 1 : counterPoint;
+					targetPossition = Gp.route1[counterPoint].getpoint();
+				}
+				targetPitch = 30;
+				break;
+			case Comand.comands.hover:
+
+				break;
+
+			default: break;
+        }
+
+
+
+
+
+
+		/*//если автопилот включен 
 		// берем точку с маршрута
 		targetPossition = Gp.route[counterPoint];
 		//считаем растояние до точки
@@ -188,7 +236,6 @@ public class quadrocopterScript : MonoBehaviour {
 		{
 			counterPoint = counterPoint<Gp.route.Count-1 ? counterPoint+1 : counterPoint;
 			targetPossition = Gp.route[counterPoint];
-			stabHorizntal();
 		}
 
 
@@ -198,7 +245,7 @@ public class quadrocopterScript : MonoBehaviour {
 		//      {
 
 		targetPitch = 30;
-		//}
+		//}*/
 	}
 
 	void AddControls()
@@ -210,7 +257,7 @@ public class quadrocopterScript : MonoBehaviour {
 			targetPossition.y += 0.2f;
 
 		if (Input.GetKey(KeyCode.DownArrow))
-			targetPossition.y -= 0.2f;
+			targetPossition.y -= 0.1f;
 
 		//Steering
 		if (Input.GetKey(KeyCode.W))
@@ -222,7 +269,7 @@ public class quadrocopterScript : MonoBehaviour {
 				targetPitch += -1f;
 			}
 			else
-				targetPitch = 0;
+				stabForward();
 		}
 
 		targetPitch = Mathf.Clamp((float)targetPitch, -30f, 30f);
@@ -240,8 +287,26 @@ public class quadrocopterScript : MonoBehaviour {
 			else
 				targetRoll = 0;
 		}
-		//Yaw
+
 		targetRoll = Mathf.Clamp((float)targetRoll, -30f, 30f);
+
+		if (Input.GetKeyDown(KeyCode.V))
+		{
+			switch (cam.mode){
+                case 0:
+                    cam.ShowFirstPersonView();
+					break;
+				case 1:
+					cam.ShowOverheadView();
+					break;
+				default:
+					cam.ShowOverheadView();
+					break;
+            }
+
+		}
+		//Yaw
+
 		if (Input.GetKey(KeyCode.LeftArrow))
 			targetYaw += -1f;
 		if (Input.GetKey(KeyCode.RightArrow))
@@ -255,6 +320,7 @@ public class quadrocopterScript : MonoBehaviour {
 	//как советуют в доке по Unity вычисления проводим в FixedUpdate, а не в Update
 	private void Start()
     {
+		cam = GetComponent<SwitchingCam>();
 		Gp = Globalparametr.getInstance();
 		gps = GetComponent<GPSModul>();
 	}
@@ -266,6 +332,7 @@ public class quadrocopterScript : MonoBehaviour {
 		AutoHangup();
 		AddControls();
 		stabilite();
+		stabHorizntal();
 	}
 	
 }
