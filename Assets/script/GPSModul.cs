@@ -36,8 +36,8 @@ public class GPSModul : MonoBehaviour
         
         vel = rb.velocity;
         GPS = Quadrocopter.transform.position;
-        Coordinate.text = "Coordinate x=" + form(GPS.x) + " y=" + form(GPS.y) + " z="+ form(GPS.z);
-        Velocity.text = "Velociti x=" + form(vel.x) + " y=" + form(vel.y) + " z=" + form(vel.z);
+        //Coordinate.text = "Coordinate x=" + form(GPS.x) + " y=" + form(GPS.y) + " z="+ form(GPS.z);
+        //Velocity.text = "Velociti x=" + form(vel.x) + " y=" + form(vel.y) + " z=" + form(vel.z);
     }
     
     private string form(double number)

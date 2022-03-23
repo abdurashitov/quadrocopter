@@ -5,6 +5,7 @@ using System;
 
 public class quadrocopterScript : MonoBehaviour {
 
+
 	//фактические параметры
 	private double pitch; //Тангаж
 	private double roll; //Крен
@@ -188,8 +189,11 @@ public class quadrocopterScript : MonoBehaviour {
 				break;
 			case Comand.comands.down:
 				targetPossition = new Vector3(gps.getGps().x, 0, gps.getGps().z);
-				if (Math.Abs(targetPossition.x - gps.getGps().y) < radiusZone)
-					counterPoint = counterPoint < Gp.route1.Count - 1 ? counterPoint + 1 : counterPoint;
+				if (Math.Abs(targetPossition.x - gps.getGps().x) < radiusZone && Math.Abs(targetPossition.z - gps.getGps().z) < radiusZone)
+				{
+					stab = true;
+			
+				}
 
 				break;
 			case Comand.comands.goTo:
@@ -209,7 +213,12 @@ public class quadrocopterScript : MonoBehaviour {
 				targetPitch = 30;
 				break;
 			case Comand.comands.hover:
-
+				targetPossition = gps.getGps();
+				if (Math.Abs(targetPossition.x - gps.getGps().x) < radiusZone && Math.Abs(targetPossition.z - gps.getGps().z) < radiusZone)
+				{
+					stab = true;
+					counterPoint = counterPoint < Gp.route1.Count - 1 ? counterPoint + 1 : counterPoint;
+				}
 				break;
 
 			default: break;
@@ -337,33 +346,3 @@ public class quadrocopterScript : MonoBehaviour {
 	
 }
 
-
-public class PID {
-	
-	private double P;
-	private double I;
-	private double D;
-	
-	private double prevErr;
-	private double sumErr;
-	
-	public PID (double P, double I, double D) {
-		this.P = P;
-		this.I = I;
-		this.D = D;
-	}
-	
-	public double calc (double current, double target) {
-		
-		double dt = Time.fixedDeltaTime;
-		
-		double err = target - current;
-		this.sumErr += err;
-		
-		double force = this.P * err + this.I * this.sumErr * dt + this.D * (err - this.prevErr) / dt;
-		
-		this.prevErr = err;
-		return force;
-	}
-
-};
