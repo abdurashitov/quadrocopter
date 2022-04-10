@@ -174,12 +174,13 @@ public class quadrocopterScript : MonoBehaviour {
 		
 		
 	}
-
+	float timer = 5;
 	void AutoPossition()
     {
 		if (!autoPilot)
-			return;
+            return;
 		Comand comand = Gp.route1[counterPoint];
+		
 		switch (comand.getComand()){
 			case Comand.comands.up:
 				targetPossition = new Vector3(gps.getGps().x, comand.getpoint().y, gps.getGps().z);
@@ -188,11 +189,13 @@ public class quadrocopterScript : MonoBehaviour {
 
 				break;
 			case Comand.comands.down:
-				targetPossition = new Vector3(gps.getGps().x, 0, gps.getGps().z);
 				if (Math.Abs(targetPossition.x - gps.getGps().x) < radiusZone && Math.Abs(targetPossition.z - gps.getGps().z) < radiusZone)
 				{
 					stab = true;
-			
+				}
+				if (fwdSpeed < 1 && driftSpeed < 1)
+				{
+					targetPossition = new Vector3(gps.getGps().x, 0, gps.getGps().z);
 				}
 
 				break;
@@ -217,7 +220,14 @@ public class quadrocopterScript : MonoBehaviour {
 				if (Math.Abs(targetPossition.x - gps.getGps().x) < radiusZone && Math.Abs(targetPossition.z - gps.getGps().z) < radiusZone)
 				{
 					stab = true;
+				}
+				if (timer <= 0)
+				{
 					counterPoint = counterPoint < Gp.route1.Count - 1 ? counterPoint + 1 : counterPoint;
+				}
+				else
+				{
+					timer -= Time.deltaTime; 
 				}
 				break;
 
@@ -343,6 +353,5 @@ public class quadrocopterScript : MonoBehaviour {
 		stabilite();
 		stabHorizntal();
 	}
-	
 }
 
